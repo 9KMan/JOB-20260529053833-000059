@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Style Brief Observability Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    h1 { color: #f8fafc; margin-bottom: 0.5rem; }
+    .subtitle { color: #94a3b8; margin-bottom: 2rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+    .card { background: #1e293b; border-radius: 12px; padding: 1.5rem; border: 1px solid #334155; }
+    .card h3 { color: #f8fafc; margin-bottom: 1rem; font-size: 1rem; }
+    .metric { font-size: 2rem; font-weight: 600; color: #38bdf8; }
+    .metric-label { color: #94a3b8; font-size: 0.875rem; margin-top: 0.25rem; }
+    .trace-list { max-height: 400px; overflow-y: auto; }
+    .trace-item { padding: 0.75rem; border-bottom: 1px solid #334155; }
+    .trace-item:last-child { border-bottom: none; }
+    .trace-id { font-family: monospace; color: #38bdf8; font-size: 0.8rem; }
+    .trace-stage { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem; }
+    .stage-gate { background: #7c3aed; }
+    .stage-writer { background: #0891b2; }
+    .stage-validation { background: #059669; }
+    .stage-fallback { background: #d97706; }
+    .stage-render { background: #dc2626; }
+    .status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.5rem; }
+    .status-success { background: #22c55e; }
+    .status-failure { background: #ef4444; }
+    .btn { background: #38bdf8; color: #0f172a; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    .btn:hover { background: #0ea5e9; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.5rem; }
+    input, textarea { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 0.75rem; color: #e2e8f0; }
+    textarea { min-height: 100px; resize: vertical; }
+    .response { background: #0f172a; border-radius: 8px; padding: 1rem; margin-top: 1rem; font-family: monospace; font-size: 0.875rem; max-height: 300px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Aria Style Brief Observability</h1>
+    <p class="subtitle">Real-time pipeline tracing for Style Brief execution</p>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Total Traces</h3>
+        <div class="metric" id="totalTraces">-</div>
+        <div class="metric-label">All time</div>
+      </div>
+      <div class="card">
+        <h3>Gate Pass Rate</h3>
+        <div class="metric" id="gatePassRate">-</div>
+        <div class="metric-label">Last 24h</div>
+      </div>
+      <div class="card">
+        <h3>Avg Latency</h3>
+        <div class="metric" id="avgLatency">-</div>
+        <div class="metric-label">Milliseconds</div>
+      </div>
+      <div class="card">
+        <h3>Success Rate</h3>
+        <div class="metric" id="successRate">-</div>
+        <div class="metric-label">End-to-end</div>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top: 2rem;">
+      <div class="card">
+        <h3>Create Test Trace</h3>
+        <div class="form-group">
+          <label>Job ID</label>
+          <input type="text" id="jobId" placeholder="test-job-001">
+        </div>
+        <div class="form-group">
+          <label>User ID</label>
+          <input type="text" id="userId" placeholder="user-123">
+        </div>
+        <div class="form-group">
+          <label>Session ID</label>
+          <input type="text" id="sessionId" placeholder="session-456">
+        </div>
+        <div class="form-group">
+          <label>Prompt</label>
+          <textarea id="prompt" placeholder="Create a style brief for..."></textarea>
+        </div>
+        <button class="btn" onclick="createTrace()">Create Trace</button>
+        <div id="createResponse" class="response" style="display:none;"></div>
+      </div>
+
+      <div class="card">
+        <h3>Recent Traces</h3>
+        <div class="trace-list" id="traceList">
+          <div style="color: #94a3b8; text-align: center; padding: 2rem;">No traces yet</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3000' : '';
+
+    async function createTrace() {
+      const jobId = document.getElementById('jobId').value || 'test-' + Date.now();
+      const userId = document.getElementById('userId').value;
+      const sessionId = document.getElementById('sessionId').value || 'session-' + Date.now();
+      const prompt = document.getElementById('prompt').value;
+
+      try {
+        const response = await fetch(`${API_BASE}/style-brief/execute`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_id: jobId, user_id: userId, session_id: sessionId, prompt, style_profile: {} })
+        });
+
+        const data = await response.json();
+        const respEl = document.getElementById('createResponse');
+        respEl.style.display = 'block';
+        respEl.textContent = JSON.stringify(data, null, 2);
+        loadTraces();
+      } catch (err) {
+        console.error('Failed to create trace:', err);
+      }
+    }
+
+    async function loadTraces() {
+      try {
+        const response = await fetch(`${API_BASE}/traces/style-brief?limit=20`);
+        const data = await response.json();
+
+        if (data.traces && data.traces.length > 0) {
+          document.getElementById('totalTraces').textContent = data.traces.length;
+          document.getElementById('traceList').innerHTML = data.traces.map(t => `
+            <div class="trace-item">
+              <span class="trace-id">${t.trace_id.substring(0, 8)}...</span>
+              <span class="status ${t.failed_at ? 'status-failure' : 'status-success'}"></span>
+              <span class="trace-stage stage-${t.gate_passed === false ? 'gate' : t.writer_called ? 'writer' : 'render'}">${t.gate_passed === false ? 'gate' : t.writer_called ? 'writer' : 'render'}</span>
+              <div style="color: #64748b; font-size: 0.75rem; margin-top: 0.25rem;">${new Date(t.created_at).toLocaleString()}</div>
+            </div>
+          `).join('');
+        }
+      } catch (err) {
+        console.error('Failed to load traces:', err);
+      }
+    }
+
+    loadTraces();
+    setInterval(loadTraces, 10000);
+  </script>
+</body>
+</html>
