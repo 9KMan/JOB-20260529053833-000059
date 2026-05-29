@@ -1,5 +1,7 @@
 # Aria Style Brief Observability
 
+**Business Problem Solved:** SaaS fashion marketplace platforms with AI stylist features face a critical challenge — when the Style Brief pipeline fails or takes an unexpected path, engineers have no visibility into what happened. Gates pass or fail silently, the writer may be called or skipped, fallbacks trigger without context, and the rendered card appears with no way to trace why. This makes debugging production issues time-consuming and risky. This project adds production-grade tracing to the Style Brief pipeline, making every execution path visible, debuggable, and measurable.
+
 Production-grade tracing instrumentation for Aria's Style Brief pipeline with TypeScript, Supabase, and Langfuse.
 
 ## Overview
