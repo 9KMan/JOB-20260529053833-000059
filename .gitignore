@@ -3,3 +3,10 @@ dist/
 .env
 *.log
 .DS_Store
+
+# Worker-internal files (never push to GitHub)
+SPEC.txt
+TASK.txt
+pid
+role
+worker.log
